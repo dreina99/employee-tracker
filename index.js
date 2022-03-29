@@ -2,6 +2,26 @@ const cTable = require('console.table')
 const db = require('./db/connection');
 const inquirer = require('inquirer');
 const { restoreDefaultPrompts } = require('inquirer');
+const { rightPadder } = require('easy-table');
+
+let dbRoleData;
+let dbEmpData;
+
+db.query(`SELECT * FROM roles`, (err, rows) => {
+    if(err) {
+        console.log(err);
+        return;
+    }
+    dbRoleData = rows;
+});
+
+db.query(`SELECT * FROM employee`, (err, rows) => {
+    if(err) {
+        console.log(err);
+        return;
+    }
+    dbEmpData = rows;
+});
 
 const promptUser = () => {
     return inquirer.prompt([
@@ -10,7 +30,7 @@ const promptUser = () => {
             name: 'next_step',
             message: 'What would you like to do?',
             choices: ['View departments', 'View roles', 'View employees', 'Add a department', 'Add an employee',
-                       'Add a role', 'Quit'],
+                       'Add a role', "Update an employee's role", 'Quit'],
             validate: list => {
                 if(list.length)
                     return true;
@@ -59,9 +79,12 @@ const viewRoles = () => {
 // left joins with roles to display
 // role and salary of each employee
 const viewEmployees = () => {
-    const sql = `SELECT employee.*, roles.title as role_title, roles.salary as role_salary FROM employee
-                 LEFT JOIN roles
-                 ON employee.role_id = roles.id`;
+    const sql = `SELECT e.*, CONCAT(m.first_name, " ", m.last_name) AS manager_name,
+                 roles.title as role_title, roles.salary as role_salary, departments.name as department_name 
+                 FROM employee e
+                 LEFT JOIN roles ON roles.id = e.role_id
+                 LEFT JOIN departments ON departments.id = roles.department_id
+                 LEFT JOIN employee m ON e.manager_id = m.id`;
     db.query(sql, (err, rows) => {
         if(err) {
             console.log(err);
@@ -184,25 +207,6 @@ const addRole = () => {
 }
 
 const addEmployee = () => {
-    let dbRoleData;
-    let dbEmpData;
-
-    db.query(`SELECT * FROM roles`, (err, rows) => {
-        if(err) {
-            console.log(err);
-            return;
-        }
-        dbRoleData = rows;
-    });
-
-    db.query(`SELECT * FROM employee`, (err, rows) => {
-        if(err) {
-            console.log(err);
-            return;
-        }
-        dbEmpData = rows;
-    });
-
     inquirer.prompt([
         {
             type: 'input',
@@ -301,6 +305,73 @@ const addEmployee = () => {
     });
 }
 
+const updateEmployee = () => {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'fullName',
+            message: "Enter the employee's full name:",
+            validate: answer => {
+                if(!answer) {
+                    return 'Please add a name!';
+                }
+
+                const nameArr = answer.split(" ");
+                //console.log(nameArr);
+                for(let i = 0; i < dbEmpData.length; i++) {
+                    if (nameArr[0] === dbEmpData[i].first_name && nameArr[1] === dbEmpData[i].last_name) return true;
+                }
+                return '\nPlease make sure the employee exists, there are no typos, and the first letter of each word is capitalized.';
+                
+            }
+        },
+        {
+            type: 'input',
+            name: 'roleName',
+            message: "Enter the employee's new role:",
+            validate: answer => {
+                for(let i = 0; i < dbRoleData.length; i++) {
+                    if(answer === dbRoleData[i].title) return true;
+                }
+                return '\nPlease make sure the role exists, there are no typos and the first letter of each word is capitalized.';
+            }
+        }
+    ])
+    .then(empData => {
+        // split name of user inputted manager
+        empNameArr = empData.fullName.split(" ");
+
+        // match first and last name to row in employee table
+        for(let i = 0; i < dbEmpData.length; i++) 
+        {
+            if(empNameArr[0] === dbEmpData[i].first_name && empNameArr[1] === dbEmpData[i].last_name) {
+                empID = dbEmpData[i].id;
+            }
+        }
+        
+        for(let i = 0; i < dbRoleData.length; i++) {
+            if(empData.roleName === dbRoleData[i].title) {
+                roleID = i + 1;
+            }
+        }
+
+        // sql query
+        const sql = `UPDATE employee SET role_id = ?
+                     WHERE id = ?`;
+        const params = [roleID, empID];
+
+        db.query(sql, params, err => {
+            if(err) {
+                console.log(err);
+                return;
+            }
+            console.log('Data inputted successfully!');
+            init();
+        })
+
+    });
+}
+
 function init() {
     let answer; 
 
@@ -336,6 +407,10 @@ function init() {
         else if(answer.next_step[0] === 'Add an employee')
         {
             addEmployee();
+        }
+        else if(answer.next_step[0] === "Update an employee's role")
+        {
+            updateEmployee();
         }
     });
 }
