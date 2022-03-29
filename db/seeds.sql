@@ -18,3 +18,10 @@ VALUES
     ('Recruiter', 48992.00, 4),
     ('Software Engineer', 132000.00, 5),
     ('Web Developer', 110000.00, 5);
+
+INSERT INTO employee(first_name, last_name, role_id, manager_id)
+VALUES
+    ('Jack', 'Johnson', 1, NULL),
+    ('Juliet', 'Montague', 2, 1),
+    ('Harold', 'Steinbery', 3, NULL),
+    ('Joseph', 'Campbell', 4, 3);
