@@ -1,6 +1,6 @@
 # Employee Tracker
   ## Description  
-  This project uses MySQL to create an employee tracking app. It allows you to add/view departments, roles and employees as well as update the role of an employee. The application runs through the npm inquirer module and used the console.table module to format the data neatly after each query. Since this app uses inquirer, all functionality is operates through the console.    
+  This project uses MySQL to create an employee tracking app. It allows you to add/view departments, roles and employees as well as update the role of an employee. The application runs through the npm inquirer module and used the console.table module to format the data neatly after each query. Since this app uses inquirer, all functionality operates through the console.    
    
 
   ## Table of Contents
